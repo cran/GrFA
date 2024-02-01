@@ -1,4 +1,4 @@
-WPE <- function(y, rmax = 8, r0 = NULL, r = NULL, weight = TRUE, method = "ic1", type = "BIC3") {
+APM <- function(y, rmax = 8, r0 = NULL, r = NULL, weight = TRUE, method = "ic1", type = "BIC3") {
   if (is.na(match(method, c("ic1", "ic2", "gap")))) {
     stop("invalid 'method' input")
   }

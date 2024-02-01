@@ -1,5 +1,5 @@
-\name{WPE}
-\alias{WPE}
+\name{APM}
+\alias{APM}
 \title{
 Weighted Projection Estimation
 }
@@ -7,7 +7,7 @@ Weighted Projection Estimation
 Weighted Projection Estimation
 }
 \usage{
-WPE(y, rmax = 8, r0 = NULL, r = NULL, weight = TRUE, method = "ic1", type = "BIC3")
+APM(y, rmax = 8, r0 = NULL, r = NULL, weight = TRUE, method = "ic1", type = "BIC3")
 }
 \arguments{
   \item{y}{a list of the observation data, each element is a data matrix of each group  with dimension \eqn{T * N_m}.}
@@ -34,7 +34,7 @@ Jiaqi Hu
 \examples{
 dat = gendata()
 dat
-WPE(dat$y, method = "ic1")
-WPE(dat$y, method = "ic2")
-WPE(dat$y, method = "gap")
+APM(dat$y, method = "ic1")
+APM(dat$y, method = "ic2")
+APM(dat$y, method = "gap")
 }

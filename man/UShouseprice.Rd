@@ -12,7 +12,7 @@ Housing price data for 16 states in the U.S over the period Jan 2000 to April 20
 A list with a length of 16. Each element is a matrix of dimension \eqn{T*N_m}.
 }
 \source{
-The original data is downloaded from the website of Zillow at \url{www.zillow.com/research/data}.
+The original data is downloaded from the website of Zillow.
 }
 
 \examples{

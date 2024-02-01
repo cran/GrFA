@@ -1,4 +1,4 @@
-export("WPE")
+export("APM")
 export("CP")
 export("CCA")
 export("GCC")
