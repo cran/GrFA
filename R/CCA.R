@@ -1,4 +1,4 @@
-CCA <- function(y, rmax = 8, r0 = NULL, r = NULL, method = "CCD", type = "BIC3") {
+CCA <- function(y, rmax = 8, r0 = NULL, r = NULL, localfactor = FALSE, method = "CCD", type = "IC3") {
   if (is.na(match(method, c("CCD", "MCC")))) {
     stop("invalid 'method' input")
   }
@@ -53,7 +53,7 @@ CCA <- function(y, rmax = 8, r0 = NULL, r = NULL, method = "CCD", type = "BIC3")
     threshold = NULL
   }
 
-  if (r0hat >= 1) {
+  if (r0hat > 0) {
     index = which.max(lmh[, , 1])
     i = index%%M
     j = (index - i)/M + 1
@@ -76,51 +76,57 @@ CCA <- function(y, rmax = 8, r0 = NULL, r = NULL, method = "CCD", type = "BIC3")
     y_proj_F_all = do.call("cbind", y_proj_F)
     Ghat = FA(y_proj_F_all, r0hat)$F
     Proj_G = Ghat %*% solve(t(Ghat) %*% Ghat) %*% t(Ghat)
+    loading_G = list()
+    for(m in 1:M){
+      loading_G[[m]] = 1/T*t(y[[m]]) %*% Ghat
+    }
   } else {
-    Ghat = NULL
+    Ghat = NA
     Proj_G = diag(0, T, T)
+    loading_G = NA
   }
-  Fhat = list()
-  y_proj_G = lapply(y, function(x) x - Proj_G %*% x)
-  if (is.null(r)) {
-    rhat = rep(0, M)
-    for (m in 1:M) {
-      rhat[m] = est_num(y_proj_G[[m]], kmax = rmaxstar - r0hat, type = type)
-      Fhat[[m]] = FA(y_proj_G[[m]], r = rhat[m])$F
+
+  # estimate F
+
+  if(localfactor == FALSE){
+    res = list(r0hat = r0hat, rho = rho[-1], Ghat = Ghat, loading_G = loading_G, threshold = threshold)
+  }else{
+    Fhat = list()
+    loading_F = list()
+    y_proj_G = lapply(y, function(x) x - Proj_G %*% x)
+    if (is.null(r)) {
+      rhat = rep(0, M)
+      for (m in 1:M) {
+        rhat[m] = est_num(y_proj_G[[m]], kmax = rmaxstar - r0hat, type = type)
+        fit = FA(y_proj_G[[m]], r = rhat[m])
+        Fhat[[m]] = fit$F
+        loading_F[[m]] = fit$L
+      }
+    } else {
+      if (!(all(r%%1 == 0) && all(r >= 0))){
+        stop("invalid 'r' input")
+      }
+      rhat = r
+      for (m in 1:M) {
+        fit = FA(y_proj_G[[m]], r = rhat[m])
+        Fhat[[m]] = fit$F
+        loading_F[[m]] = fit$L
+      }
     }
-  } else {
-    if (!(all(r%%1 == 0) && all(r >= 0))){
-      stop("invalid 'r' input")
+
+    # estimate e
+    e = list()
+    for(m in 1:M){
+      if(rhat[m] > 0){
+        e[[m]] = y_proj_G[[m]] - Fhat[[m]] %*% t(loading_F[[m]])
+      }else{
+        e[[m]] = y_proj_G[[m]]
+      }
     }
-    rhat = r
-    for (m in 1:M) {
-      Fhat[[m]] = FA(y_proj_G[[m]], r[m])$F
-    }
+    res = list(r0hat = r0hat, rhat = rhat, rho = rho[-1], Ghat = Ghat, Fhat = Fhat,
+               loading_G = loading_G, loading_F = loading_F, residual = e, threshold = threshold)
+
   }
-  loading_G = list()
-  loading_F = list()
-  e = list()
-  for(m in 1:M){
-    if(r0hat == 0 & rhat[m] == 0){
-      loading_F[[m]] = NA
-      loading_G[[m]] = NA
-      e[[m]] = y[[m]]
-    }else if(r0hat == 0 & rhat[m] > 0){
-      loading_G[[m]] = NA
-      loading_F[[m]] = 1/T*t(y[[m]]) %*% Fhat[[m]]
-      e[[m]] = y[[m]] - Fhat[[m]] %*% t(loading_F[[m]])
-    }else if(r0hat > 0 & rhat[m] == 0){
-      loading_G[[m]] = 1/T*t(y[[m]]) %*% Ghat
-      loading_F[[m]] = NA
-      e[[m]] = y[[m]] - Ghat %*% t(loading_G[[m]])
-    }else{
-      loading_G[[m]] = 1/T*t(y[[m]]) %*% Ghat
-      loading_F[[m]] = 1/T*t(y[[m]]) %*% Fhat[[m]]
-      e[[m]] = y[[m]] - Ghat %*% t(loading_G[[m]]) - Fhat[[m]] %*% t(loading_F[[m]])
-    }
-  }
-  res = list(r0hat = r0hat, rhat = rhat, rho = rho[-1], Ghat = Ghat, Fhat = Fhat,
-             loading_G = loading_G, loading_F = loading_F, residual = e, threshold = threshold)
   class(res) = "GFA"
   return(res)
 }

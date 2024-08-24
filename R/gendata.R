@@ -1,7 +1,7 @@
 gendata <- function(seed = 1, T = 50, N = rep(30, 5),
                     r0 = 2, r = rep(2, 5),
                     Phi_G = 0.5, Phi_F = 0.5, Phi_e = 0.5,
-                    W_F = 0.5, beta = 0.1, kappa = 1, case = 1){
+                    W_F = 0.5, beta = 0.2, kappa = 1, case = 1){
   # check the validation of input parameters
   if(r0 %% 1 != 0 | r0 < 0) stop("invalid r0 input")
   if(!(all(r %% 1 == 0) && all(r > 0))) stop("invalid r input")
@@ -11,13 +11,14 @@ gendata <- function(seed = 1, T = 50, N = rep(30, 5),
   if(Phi_e < 0 | Phi_e >= 1) stop("invalid Phi_e input")
   if(W_F < 0 | W_F >= 1) stop("invalid W_F input")
   if(beta < 0 | beta >= 1) stop("invalid beta input")
-  if(kappa < 0) stop("invalid kappa input")
+  # if(kappa < 0) stop("invalid kappa input")
   if(!all(case %in% c(1, 2, 3))) stop("invalid case input")
   if(case == 2){
     if(length(unique(r)) > 1) stop("invalid r input")
   }
   set.seed(seed)
   M = length(r)
+  if(length(kappa) == 1) kappa = rep(kappa, M)
   F = list()
   y = list()
   loading_F = list()
@@ -99,7 +100,7 @@ gendata <- function(seed = 1, T = 50, N = rep(30, 5),
     e[[m]] = em
   }
   for(m in 1:M){
-    y[[m]] = G %*% t(loading_G[[m]]) + sqrt(theta1[m])*F[[m]] %*% t(loading_F[[m]]) + sqrt(kappa*theta2[m])*e[[m]]
+    y[[m]] = G %*% t(loading_G[[m]]) + sqrt(theta1[m])*F[[m]] %*% t(loading_F[[m]]) + sqrt(kappa[m]*theta2[m])*e[[m]]
   }
   res = list(y = y, G = G, F = F, loading_G = loading_G, loading_F = loading_F, T = T, N = N, M = M, r0 = r0, r = r, case = case)
   class(res) = "GFD"

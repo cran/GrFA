@@ -1,5 +1,5 @@
-APM <- function(y, rmax = 8, r0 = NULL, r = NULL, weight = TRUE, method = "ic1", type = "BIC3") {
-  if (is.na(match(method, c("ic1", "ic2", "gap")))) {
+APM <- function(y, rmax = 8, r0 = NULL, r = NULL, localfactor = FALSE, weight = TRUE, method = "ic", type = "IC3") {
+  if (is.na(match(method, c("ic", "gap")))) {
     stop("invalid 'method' input")
   }
   M = length(y)
@@ -7,9 +7,15 @@ APM <- function(y, rmax = 8, r0 = NULL, r = NULL, weight = TRUE, method = "ic1",
   Nm = sapply(y, ncol)
   K = list()
   Proj_Mat = list()
+  rhat = rep(0, M)
   for (m in 1:M) {
-    K[[m]] = FA(y[[m]], r = rmax)$F
-    Proj_Mat[[m]] = K[[m]] %*% solve(t(K[[m]]) %*% K[[m]]) %*% t(K[[m]])
+    rhat[m] = est_num(y[[m]], kmax = rmax, type = type)
+    K[[m]] = FA(y[[m]], r = rhat[m])$F
+    if(rhat[m] == 0){
+      Proj_Mat[[m]] = matrix(0, T, T)
+    } else{
+      Proj_Mat[[m]] = K[[m]] %*% solve(t(K[[m]]) %*% K[[m]]) %*% t(K[[m]])
+    }
   }
   W_Proj_Mat = matrix(0, T, T)
   if (weight == TRUE) {
@@ -27,6 +33,8 @@ APM <- function(y, rmax = 8, r0 = NULL, r = NULL, weight = TRUE, method = "ic1",
   } else {
     stop("invalid 'weight' input")
   }
+
+  # estimate r0
   eig_deco = eigen(W_Proj_Mat)
   rho = eig_deco$values[1:rmax]
   if (is.null(r0)) {
@@ -38,85 +46,84 @@ APM <- function(y, rmax = 8, r0 = NULL, r = NULL, weight = TRUE, method = "ic1",
       }
       r0hat = which.max(rho_gap) - 1
       threshold = NULL
-    } else {
-      rho = c(1, rho)
+      rho = rho[-1]
+    } else if (method == "ic"){
       rhat = rep(0, M)
       K = list()
+      e = list()
       for (m in 1:M) {
-        rhat[m] = est_num(y[[m]], kmax = rmax, type = type)
-        K[[m]] = FA(y[[m]], r = rhat[m])$F
+        e[[m]] = y[[m]] - Proj_Mat[[m]] %*% y[[m]]
       }
+      sigma2_e = sum(sapply(e, function(x) sum(x^2)))/(T * sum(Nm))
       sigma2_y = sum(sapply(y, function(x) sum(x^2)))/(T * sum(Nm))
-      f = function(y, F) {
-        e = y - F %*% solve(t(F) %*% F) %*% t(F) %*% y
-        sum(e^2)
+      if(weight == TRUE){
+        Nmin = mean(Nm)
+        Nmin = min(Nm)
+      }else{
+        Nmin = min(Nm)
       }
-      sigma2_e = sum(mapply(f, y, K)/(T * sum(Nm)))
-      Nmin = min(Nm)
-      if (method == "ic1") {
-        threshold = 1 - (Nmin * T)^(-1/4) * log(log(Nmin * T/(Nmin + T))) * exp(sigma2_e/sigma2_y) * (1 - 1/M)
-      } else {
-        threshold = 1 - (sqrt(Nmin) + sqrt(T))/(sqrt(Nmin * T)) * log(log(sqrt(min(Nmin, T)))) * exp(sigma2_e/sigma2_y) * (1 - 1/M)
-      }
-      r0hat = sum(rho >= threshold) - 1
+      threshold = 1 - (sqrt(Nmin) + sqrt(T))/(sqrt(Nmin * T)) * log(log(sqrt(min(Nmin, T)))) * exp(sigma2_e/sigma2_y) * (1 - 1/M)
+      r0hat = sum(rho >= threshold)
     }
   } else {
-    if (!(r0%%1 == 0) | r0 < 0) {
-      stop("invalid 'r0' input")
-    }
     threshold = NULL
     r0hat = r0
-    rho = c(1, rho)
   }
+
+  # estimate G
   if (r0hat > 0) {
     Ghat = eig_deco$vectors[, 1:r0hat]
     Ghat = sqrt(T) * as.matrix(Ghat)
     Proj_G = Ghat %*% solve(t(Ghat) %*% Ghat) %*% t(Ghat)
+    loading_G = list()
+    for(m in 1:M){
+      loading_G[[m]] = 1/T*t(y[[m]]) %*% Ghat
+    }
   } else {
-    Ghat = NULL
+    Ghat = NA
     Proj_G = matrix(0, T, T)
+    loading_G = NA
   }
-  y_proj_G = lapply(y, function(x) x - Proj_G %*% x)
-  Fhat = list()
-  if (is.null(r)) {
-    rhat = rep(0, M)
-    for (m in 1:M) {
-      rhat[m] = est_num(y_proj_G[[m]], kmax = rmax - r0hat, type = type)
-      Fhat[[m]] = FA(y_proj_G[[m]], r = rhat[m])$F
+
+  # estimate F
+  if(localfactor == FALSE){
+    res = list(r0hat = r0hat, rho = rho, Ghat = Ghat, loading_G = loading_G, threshold = threshold)
+  }else{
+    Fhat = list()
+    loading_F = list()
+    y_proj_G = lapply(y, function(x) x - Proj_G %*% x)
+    if (is.null(r)) {
+      rhat = rep(0, M)
+      for (m in 1:M) {
+        rhat[m] = est_num(y_proj_G[[m]], kmax = rmax - r0hat, type = type)
+        fit = FA(y_proj_G[[m]], r = rhat[m])
+        Fhat[[m]] = fit$F
+        loading_F[[m]] = fit$L
+      }
+    } else {
+      if (!(all(r%%1 == 0) && all(r >= 0))) {
+        stop("invalid 'r' input")
+      }
+      rhat = r
+      for (m in 1:M) {
+        fit = FA(y_proj_G[[m]], r = rhat[m])
+        Fhat[[m]] = fit$F
+        loading_F[[m]] = fit$L
+      }
     }
-  } else {
-    if (!(all(r%%1 == 0) && all(r >= 0))) {
-      stop("invalid 'r' input")
+
+    # estimate e
+    e = list()
+    for(m in 1:M){
+      if(rhat[m] > 0){
+        e[[m]] = y_proj_G[[m]] - Fhat[[m]] %*% t(loading_F[[m]])
+      }else{
+        e[[m]] = y_proj_G[[m]]
+      }
     }
-    rhat = r
-    for (m in 1:M) {
-      Fhat[[m]] = FA(y_proj_G[[m]], r[m])$F
-    }
+    res = list(r0hat = r0hat, rhat = rhat, rho = rho, Ghat = Ghat, Fhat = Fhat,
+               loading_G = loading_G, loading_F = loading_F, residual = e, threshold = threshold)
   }
-  loading_G = list()
-  loading_F = list()
-  e = list()
-  for(m in 1:M){
-    if(r0hat == 0 & rhat[m] == 0){
-      loading_F[[m]] = NA
-      loading_G[[m]] = NA
-      e[[m]] = y[[m]]
-    }else if(r0hat == 0 & rhat[m] > 0){
-      loading_G[[m]] = NA
-      loading_F[[m]] = 1/T*t(y[[m]]) %*% Fhat[[m]]
-      e[[m]] = y[[m]] - Fhat[[m]] %*% t(loading_F[[m]])
-    }else if(r0hat > 0 & rhat[m] == 0){
-      loading_G[[m]] = 1/T*t(y[[m]]) %*% Ghat
-      loading_F[[m]] = NA
-      e[[m]] = y[[m]] - Ghat %*% t(loading_G[[m]])
-    }else{
-      loading_G[[m]] = 1/T*t(y[[m]]) %*% Ghat
-      loading_F[[m]] = 1/T*t(y[[m]]) %*% Fhat[[m]]
-      e[[m]] = y[[m]] - Ghat %*% t(loading_G[[m]]) - Fhat[[m]] %*% t(loading_F[[m]])
-    }
-  }
-  res = list(r0hat = r0hat, rhat = rhat, rho = rho[-1], Ghat = Ghat, Fhat = Fhat,
-             loading_G = loading_G, loading_F = loading_F, residual = e, threshold = threshold)
   class(res) = "GFA"
   return(res)
 }

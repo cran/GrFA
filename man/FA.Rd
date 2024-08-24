@@ -1,10 +1,10 @@
 \name{FA}
 \alias{FA}
 \title{
-Classical factor analysis
+Factor analysis
 }
 \description{
-Classical factor analysis.
+Factor analysis.
 }
 \usage{
 FA(X, r)

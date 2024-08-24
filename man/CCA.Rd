@@ -7,15 +7,16 @@ Canonical Correlation Estimation
 Canonical Correlation Estimation
 }
 \usage{
-CCA(y, rmax = 8, r0 = NULL, r = NULL, method = "CCD", type = "BIC3")
+CCA(y, rmax = 8, r0 = NULL, r = NULL, localfactor = FALSE, method = "CCD", type = "IC3")
 }
 \arguments{
   \item{y}{a list of the observation data, each element is a data matrix of each group  with dimension \eqn{T * N_m}.}
   \item{rmax}{the maximum factor numbers of all groups.}
   \item{r0}{the number of global factors, default is \code{NULL}, the algorithm will automatically estimate the number of global factors. If you have the prior information about the true number of global factors, you can set it by your own.}
   \item{r}{the number of local factors in each group, default is \code{NULL}, the algorithm will automatically estimate the number of local factors. If you have the prior information about the true number of local factors, you can set it by your own, notice it should be an integer vector of length \eqn{M} (the number of groups).}
+  \item{localfactor}{if \code{localfactor = FALSE}, then we would not estimate the local factors; if \code{localfactor = TRUE}, then we will further estimate the local factors.}
   \item{method}{the method used in the algorithm, default is \code{CCD}, it can also be \code{MCC}.}
-  \item{type}{the method used in estimating the factor numbers in each group initially, default is \code{BIC3}, it can also be \code{IC3}}
+  \item{type}{the method used in estimating the factor numbers in each group initially, default is \code{IC3}.}
 }
 \value{
   \item{r0hat}{the estimated number of the global factors.}
@@ -28,14 +29,12 @@ CCA(y, rmax = 8, r0 = NULL, r = NULL, method = "CCD", type = "BIC3")
   \item{threshold}{the threshold used in determining the number of global factors, only for \code{method = "MCC"}.}
 }
 \references{
-Choi, I., Kim, D., Kim, Y. J., & Kwark, N. S. (2018). A multilevel factor model: Identification, asymptotic theory and applications. Journal of Applied Econometrics, 33(3), 355-377.
-
 Choi, I., Lin, R., & Shin, Y. (2021). Canonical correlation-based model selection for the multilevel factors. Journal of Econometrics.
 }
 \examples{
 dat = gendata()
 dat
-CCA(dat$y, method = "CCD")
-CCA(dat$y, method = "MCC")
+CCA(dat$y, rmax = 8, localfactor = TRUE, method = "CCD")
+CCA(dat$y, rmax = 8, localfactor = TRUE, method = "MCC")
 }
 

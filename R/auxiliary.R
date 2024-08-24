@@ -3,7 +3,7 @@ print.GFA <- function(x, ...){
   if (!inherits(x, "GFA"))
     stop("Not a legitimate \"GFA\" object")
   cat("The number of global factors is:", x$r0hat, "\n")
-  cat("The number of local factors are:", x$rhat, "\n")
+  if(!is.null(x$rhat)) cat("The number of local factors are:", x$rhat, "\n")
   if(!is.null(x$threshold)) cat("The threshold is:", x$threshold, "\n")
   cat("The reference statistics are:", round(x$rho, 4), "\n")
 }
@@ -35,16 +35,12 @@ tr <- function(x){
 }
 
 TraceRatio <- function(G, Ghat){
-  if(ncol(G) > 0 & !is.null(Ghat)){
-    # TR1:
-    TR1 = tr(t(G) %*% Ghat %*% solve(t(Ghat) %*% Ghat) %*% t(Ghat) %*% G) / tr(t(G) %*% G)
-    # TR2:
-    TR2 = tr(t(Ghat) %*% (G %*% solve(t(G) %*% G) %*% t(G)) %*% Ghat)/tr(t(Ghat) %*% Ghat)
-    ratios = c(TR1, TR2)
-    names(ratios) = c("TR1", "TR2")
-    return(ratios)
+  if(ncol(G) > 0 & !all(is.na(Ghat))){
+    # TR:
+    TR = tr(t(G) %*% Ghat %*% solve(t(Ghat) %*% Ghat) %*% t(Ghat) %*% G) / tr(t(G) %*% G)
+    return(TR)
   } else{
-    return(c(0, 0))
+    return(0)
   }
 }
 
