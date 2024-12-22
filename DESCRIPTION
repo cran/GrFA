@@ -1,8 +1,8 @@
 Package: GrFA
 Type: Package
 Title: Group Factor Analysis
-Date: 2024-07-25
-Version: 0.2
+Date: 2024-12-15
+Version: 0.2.1
 Authors@R: c(
   person(given = "Jiaqi", family = "Hu", email = "hujiaqi@mail.ustc.edu.cn", role = c("cre", "aut")),
   person(given = "Ting", family = "Li", email = "tingeric.li@polyu.edu.hk", role = c("aut")),
@@ -19,6 +19,6 @@ Encoding: UTF-8
 RoxygenNote: 7.2.3
 LazyData: true
 NeedsCompilation: no
-Packaged: 2024-08-24 09:18:32 UTC; hujiaqi
+Packaged: 2024-12-22 06:47:58 UTC; hujiaqi
 Repository: CRAN
-Date/Publication: 2024-08-24 10:00:02 UTC
+Date/Publication: 2024-12-22 07:00:02 UTC
